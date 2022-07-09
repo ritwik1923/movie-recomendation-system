@@ -1,0 +1,3 @@
+*.pkl
+testing/ml/similarity.pkl
+testing/venv

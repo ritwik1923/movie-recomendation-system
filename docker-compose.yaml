@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+
+
+  backend:
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    ports:
+    - 5002:5000
+    volumes:
+    - appdata:/python-docker
+    # links:
+    # - mongodb
+    networks:
+    - backend
+volumes:
+#   mongo-data:
+#     driver: local
+#   mongo-configdb:
+  appdata:
+    driver: local
+networks:
+  backend:
+    driver: bridge
+# https://www.digitalocean.com/community/tutorials/how-to-set-up-flask-with-mongodb-and-docker
+# mongodb+srv://rp-admin:UGrwk_3030wZbs20225AEC78bD@rp.avule.mongodb.net/db?retryWrites=true&w=majority
