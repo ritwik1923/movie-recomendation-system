@@ -1,8 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/src/foundation/key.dart';
 import 'package:flutter/src/widgets/framework.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mrs_app/bloc/recmovie_bloc.dart';
+import 'package:mrs_app/bloc/recomendBloc/recomend_movie_bloc.dart';
+import 'package:mrs_app/model/MovieDataModel.dart';
+import 'package:mrs_app/screen/movie_detail.dart';
 
 import '../networkhandler.dart/networkhandler.dart';
 
@@ -14,232 +20,474 @@ class DashBoardScreen extends StatefulWidget {
 }
 
 class _DashBoardScreenState extends State<DashBoardScreen> {
+  int currentPage = 0;
   @override
   void initState() {
     // TODO: implement initState
-    // this._getMovies();
-  }
-  late MovieListDataModel _movieChoose;
-  int dropdownvalue = 0;
-  List<MovieListDataModel> movieDataList = [];
-
-  NetworkHandler nh = NetworkHandler();
-  Future _getMovies() async {
-    var list;
-    final res = await nh.getMovies1().then((value) {
-      list = json.decode(value.body)['data'];
-      int t = 5;
-      for (var movie in list) {
-        if (t == 0) break;
-        --t;
-        nh.fetchMoviesDetail(movie).then((value) {
-          var res = json.decode(value.body);
-          movieDataList.add(
-              MovieListDataModel(res['original_title'], res['poster_path']));
-          // print("${res['original_title']}  ${res['poster_path']}");
-        });
+    // future = this._getMovies();
+    _currentSelectedValue = _currencies[0];
+    ctrl.addListener(() {
+      int pos = ctrl.page!.round();
+      if (currentPage != pos) {
+        {
+          setState(() {
+            currentPage = pos;
+          });
+        }
       }
-      // for (var i in movieDataList) print(i.movie_logo);
-    }).onError((error, stackTrace) {
-      print(error);
-      // list = [];
     });
-    return movieDataList;
-    // print("respp: $res");
-    // setState(() {
-    //   list = res;
-    // });
-    // return "done";
+    // _movieChoose = movieDataList[0];
   }
+
+  late MovieModel _movieChoose;
+  late MovieModel dropdownvalue;
+  List<MovieModel> movieDataList = [];
+  final movieTextCtrl = TextEditingController();
+  var _currencies = [
+    "Food",
+    "Transport",
+    "Personal",
+    "Shopping",
+    "Medical",
+    "Rent",
+    "Movie",
+    "Salary"
+  ];
+  late String _currentSelectedValue;
+  NetworkHandler nh = NetworkHandler();
+  late Future<List<MovieModel>> future;
+  late Future<List<MovieModel>> future1;
+  final PageController ctrl = PageController(
+    viewportFraction: 0.99,
+  );
 
   @override
   Widget build(BuildContext context) {
+    // if (movieDataList.isNotEmpty) _movieChoose = movieDataList[0];
     return Scaffold(
-      body: FutureBuilder(
-        future: _getMovies(), // a previously-obtained Future<String> or null
-        builder: (BuildContext context, AsyncSnapshot projectSnap) {
-          List<Widget> children;
-          if (projectSnap.hasData) {
-            var movies = projectSnap.data; // as List<String>?;
-            print("movies list: ${movies?.length}");
-            print("movies list: ${movies}");
-            
-            // dropdownvalue = movies[0];
-            // var fetdata = nh.fetchMoviesDetail(movies[0]).then((value) {
-            //   var res = json.decode(value.body);
-            //   print(res);
-            // });
+        appBar: AppBar(
+          leading: IconButton(
+            icon: Icon(Icons.menu_sharp),
+            onPressed: () {},
+          ),
+          title: Container(
+              // margin: EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+              padding: EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.blue[900],
+              ),
+              child: Text("MRS",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      height: 1.0,
+                      fontSize: 24,
+                      fontFamily: "Poppins"))),
+        ),
+        body: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 10),
 
-            // for (String movie in movies)
-            //   movieDataList.add(MovieListDataModel(movie,
-            //       "https://www.kindpng.com/picc/m/83-837808_sbi-logo-state-bank-of-india-group-png.png"));
-            // if (movies != Null)
-            //   for (int movie = 0; movie < 5; ++movie) {
-            //     print(movies![movie]);
-            //   }
-            // _movieChoose = movieDataList[0];
-            return SingleChildScrollView(
-              child: Column(
+                // SizedBox(height: 20),
+                Container(
+                  height: MediaQuery.of(context).size.height - 200,
+                  // color: Colors.pink,
+                  child: PageView.builder(
+                      controller: ctrl,
+                      itemCount: 8,
+                      physics: const BouncingScrollPhysics(),
+                      itemBuilder: (context, int index) {
+                        // Active page
+                        bool active = index == currentPage;
+                        return _buildStoryPage();
+                      }),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text("Recomended Movie",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          height: 1.0, fontSize: 30, fontWeight: FontWeight.bold, fontFamily: "Poppins")),
+                ),
 
-                children: <Widget>[
-                  
-                  ListView.builder(
-                    itemCount: movieDataList.length,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        // leading: Image.network("https://image.tmdb.org/t/p/w500/" + movieDataList[index].movie_logo),
-                        title: Text(movieDataList[index].movie_logo),
+                BlocBuilder<RecmovieBloc, RecmovieState>(
+                  key: UniqueKey(),
+                  builder: (context, state) {
+                    print("i: ");
+                    if (state is RecmovieInitialState) {
+                      print("added loading");
+                      context.read<RecmovieBloc>().add(LoadMovieEvent());
+                      return Column(
+                        children: [
+                          const SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: const CircularProgressIndicator(),
+                          ),
+                          const Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: Text('Awaiting result...'),
+                          )
+                        ],
                       );
-                    },
-                  )
-                  
-                  /*
-                  DropdownButton(
-                    // Initial Value
-                    value: dropdownvalue,
-
-                    // Down Arrow Icon
-                    icon: const Icon(Icons.keyboard_arrow_down),
-
-                    // Array list of items
-                    items: [0,1,2,3].map((int items) {
-                      return DropdownMenuItem(
-                        value: items,
-                        child: Text("items $items"),
+                      // return CircularProgressIndicator();
+                    } else if (state is MovieLoadingState) {
+                      print("loading");
+                      return Column(
+                        children: [
+                          const SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: CircularProgressIndicator(),
+                          ),
+                          const Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: Text('Awaiting result...'),
+                          )
+                        ],
                       );
-                    }).toList(),
-                    // After selecting the desired option,it will
-                    // change button value to selected value
-                    onChanged: (int? Value) {
-                      setState(() {
-                        dropdownvalue = Value!;
-                      });
-                    },
+                    } else if (state is MovieLoadedState) {
+                      print("loaded");
+                      //,
+
+                      print(state.movies);
+                      // setState(() {
+                      //   movieDataList = state.movies;
+                      // });
+                      // state.
+
+                      return reWidget(state.movies);
+                    } else if (state is MovieErrorState) {
+                      return const Text("Error");
+                    }
+                    return const Text("Something went wrong");
+                    // return Container();
+                  },
+                ),
+
+             
+                const SizedBox(
+                  height: 10,
+                ),
+                // Expanded(child: Container(),),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text("Made with ❤️",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          height: 1.0, fontSize: 10, fontFamily: "Poppins")),
+                ),
+              ],
+            ),
+          ),
+        ));
+  }
+
+  _buildStoryPage() {
+    List<Color> getColorsList = [
+      Colors.blueAccent,
+      Colors.blueAccent,
+      Colors.blue,
+      Colors.blue,
+    ];
+
+    bool active = true;
+    print("active: $active");
+    // Animated Properties
+    final double blur = active ? 30 : 0;
+    final double offset = active ? 20 : 0;
+    final double top = active ? 100 : 200;
+
+    return AnimatedContainer(
+      duration: Duration(milliseconds: 500),
+      // height: 100,
+      curve: Curves.easeOutQuint,
+      // TODO: COntraints not working properly
+      constraints: BoxConstraints(minHeight: 500, minWidth: 750),
+      // margin: EdgeInsets.only(top: top, bottom: 50, right: 30),
+      margin: EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        // color: Colors.blue,
+        // gradient: LinearGradient(
+        //   begin: Alignment.centerLeft,
+        //   end: Alignment.centerRight,
+        //   // colors: getColorsList,
+        //   tileMode: TileMode.clamp,
+        // ),
+        image: DecorationImage(
+          fit: BoxFit.fill,
+          image: NetworkImage("https://image.tmdb.org/t/p/w500/" +
+              "/p9fXIvNppK21fCHAEkznSZb8hnv.jpg"),
+        ),
+      ),
+      child: Stack(
+        children: [
+          Align(
+            alignment: Alignment.bottomLeft,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.end,
+                // crossAxisAlignment: CrossAxisAlignment.,
+                children: [
+                  Image.network(
+                    "https://image.tmdb.org/t/p/w500/" +
+                        "/wxgD3fB5lQ2sGJLog0rvXW049Pf.jpg",
+                    height: 200,
+                    width: 100,
+                    fit: BoxFit.cover,
                   ),
-                  // ListView.builder(
-                  //   itemBuilder: movies?.length,
-                  // )
-                  */
-                  /*
-                  Form(
-                    child: Center(
-                      child: Container(
-                        margin: EdgeInsets.only(left: 15, top: 10, right: 15),
-                        child: FormField<String>(
-                          builder: (FormFieldState<String> state) {
-                            return InputDecorator(
-                              decoration: InputDecoration(
-                                  contentPadding:
-                                      EdgeInsets.fromLTRB(12, 10, 20, 20),
-                                  // labelText: "hi",
-                                  // labelStyle: textStyle,
-                                  // labelText: _dropdownValue == null
-                                  //     ? 'Where are you from'
-                                  //     : 'From',
-                                  errorText: "Wrong Choice",
-                                  errorStyle: TextStyle(
-                                      color: Colors.redAccent, fontSize: 16.0),
-                                  border: OutlineInputBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(10.0))),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<MovieListDataModel>(
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey,
-                                    fontFamily: "verdana_regular",
-                                  ),
-                                  hint: Text(
-                                    "Select movie",
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 16,
-                                      fontFamily: "verdana_regular",
-                                    ),
-                                  ),
-                                  items: movieDataList.map<
-                                          DropdownMenuItem<MovieListDataModel>>(
-                                      (MovieListDataModel value) {
-                                    return DropdownMenuItem(
-                                      value: value,
-                                      child: Row(
-                                        // mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          CircleAvatar(
-                                            backgroundImage:
-                                                NetworkImage(value.movie_logo),
-                                          ),
-                                          // Icon(valueItem.movie_logo),
-                                          SizedBox(
-                                            width: 15,
-                                          ),
-                                          Text(value.movie_name),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                  isExpanded: true,
-                                  isDense: true,
-                                  onChanged: (MovieListDataModel? value) {
-                                    setState(() {
-                                      _movieChoose = value!;
-                                    });
-                                  },
-                                  value: _movieChoose,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Movie Name",
+                            // textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                height: 1.0,
+                                fontSize: 24,
+                                fontFamily: "Poppins")),
+                        Text("Movie describtion",
+                            // textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                height: 1.0,
+                                fontSize: 14,
+                                fontFamily: "Poppins")),
+                      ],
                     ),
-                  ),
-*/
-                  // Widget to display the list of project
+                  )
                 ],
               ),
-            );
-          } else if (projectSnap.hasError) {
-            children = <Widget>[
-              const Icon(
-                Icons.error_outline,
-                color: Colors.red,
-                size: 60,
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Text('Error '), //${projectSnap.error}'),
-              )
-            ];
-          } else {
-            children = const <Widget>[
-              SizedBox(
-                width: 60,
-                height: 60,
-                child: CircularProgressIndicator(),
-              ),
-              Padding(
-                padding: EdgeInsets.only(top: 16),
-                child: Text('Awaiting result...'),
-              )
-            ];
-          }
-          return Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: children,
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                // height: 30,
+                // width: 30,
+                padding: EdgeInsets.symmetric(horizontal: 5, vertical: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                  color: Colors.white.withOpacity(.2),
+                  border: Border.all(color: Colors.white),
+                ),
+                child: Icon(
+                  Icons.arrow_back_ios_new_sharp,
+                  size: 30,
+                ),
               ),
             ),
-          );
-        },
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                // height: 30,
+                // width: 30,
+                padding: EdgeInsets.symmetric(horizontal: 5, vertical: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                  color: Colors.white.withOpacity(.2),
+                  border: Border.all(color: Colors.white),
+                ),
+                child: Icon(
+                  Icons.arrow_back_ios_new_sharp,
+                  size: 30,
+                ),
+              ),
+            ),
+          )
+        ],
       ),
+    );
+  }
+
+  Widget reWidget(var movies) {
+    _movieChoose = movies[0];
+    return Wrap(
+      // mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        for (MovieModel i in movies)
+          GestureDetector(
+            onTap: (() {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => MovieDetail(
+                          movie: i,
+                        )),
+              );
+            }),
+            child: Container(
+              // width: 100,
+              width: 100,
+              margin: const EdgeInsets.all(5),
+              // color: Colors.pink,
+              child: Column(children: [
+                Image.network(
+                  "https://image.tmdb.org/t/p/w500/" + i.movie_logo,
+                  height: 200,
+                  fit: BoxFit.cover,
+                ),
+                // Text("${i.movie_logo}"),
+                Container(
+                    padding: const EdgeInsets.all(5),
+                    height: 50,
+                    child: Text("${i.movie_name}",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            height: 1.0,
+                            fontSize: 14,
+                            fontFamily: "Poppins"))),
+              ]),
+            ),
+          ),
+      ],
+    );
+  }
+
+// TODO: popback making error
+  Widget recmovieswidget(var movies) {
+    return Column(
+      children: <Widget>[
+/*
+        Container(
+          width: MediaQuery.of(context).size.width,
+          child: Wrap(
+            // mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              for (MovieModel i in movies)
+                Container(
+                  // width: 100,
+                  width: 100,
+                  margin: const EdgeInsets.all(5),
+                  // color: Colors.pink,
+                  child: Wrap(children: [
+                    Image.network(
+                      "https://image.tmdb.org/t/p/w500/" + i.movie_logo,
+                      height: 200,
+                      fit: BoxFit.cover,
+                    ),
+                    // Text("${i.movie_logo}"),
+                    Container(
+                        padding: const EdgeInsets.all(5),
+                        height: 50,
+                        child: Text("${i.movie_name}",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                height: 1.0,
+                                fontSize: 14,
+                                fontFamily: "Poppins"))),
+                  ]),
+                ),
+            ],
+          ),
+        ),
+        */
+
+        // Widget to display the list of project
+      ],
+    );
+  }
+
+  Widget reUse(Key k) {
+    return DropdownButton(
+      // Initial Value
+      value: _currentSelectedValue,
+
+      // Down Arrow Icon
+      icon: const Icon(Icons.keyboard_arrow_down),
+
+      // Array list of items
+      items: _currencies.map((String items) {
+        return DropdownMenuItem(
+          value: items,
+          child: Text(items),
+        );
+      }).toList(),
+      // After selecting the desired option,it will
+      // change button value to selected value
+      onChanged: (String? newValue) {
+        setState(() {
+          _currentSelectedValue = newValue!;
+        });
+      },
+    );
+    return DropdownButton<String>(
+      key: k,
+      value: _currentSelectedValue,
+      isDense: true,
+      onChanged: (String? newValue) {
+        setState(() {
+          _currentSelectedValue = newValue!;
+          print("Selected: ${_currentSelectedValue}");
+          // state.didChange(newValue);
+        });
+      },
+      items: _currencies.map((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(value),
+        );
+      }).toList(),
+    );
+    return FormField<String>(
+      key: k,
+      initialValue: _currentSelectedValue,
+      validator: (value) {
+        print("value: $value");
+      },
+      builder: (FormFieldState<String> state) {
+        return InputDecorator(
+          decoration: InputDecoration(
+              // labelStyle: textStyle,
+              errorStyle:
+                  const TextStyle(color: Colors.redAccent, fontSize: 16.0),
+              hintText: 'Please select expense',
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(5.0))),
+          isEmpty: _currentSelectedValue == '',
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _currentSelectedValue,
+              isDense: true,
+              onChanged: (String? newValue) {
+                setState(() {
+                  _currentSelectedValue = newValue!;
+                  print("Selected: ${_currentSelectedValue}");
+                  state.didChange(newValue);
+                });
+              },
+              items: _currencies.map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
-class MovieListDataModel {
-  String movie_name;
-  String movie_logo;
-  MovieListDataModel(this.movie_name, this.movie_logo);
-}
+// class MovieModel {
+//   int movie_id;
+//   String movie_name;
+//   String movie_logo;
+//   MovieModel(this.movie_id, this.movie_name, this.movie_logo);
+// }

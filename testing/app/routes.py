@@ -42,14 +42,16 @@ def getMovies():
 @app.route('/sendRecomendation')
 def sendRecomendation():
     selected_movie = search = request.args.get("movie")
-    recommended_movie_names,recommended_movie_posters = recommend(selected_movie)
+    recommended_movie_id= recommend(selected_movie)
     
-    data = {
-        # "recommended_movie_names":json.dumps(recommended_movie_names),
-        "recommended_movie_posters":json.dumps(recommended_movie_posters)
+    
+    json_data = jsonify(recommended_movie_id)
+    print(recommended_movie_id)
+    response = jsonify({"data":recommended_movie_id})
+    response.headers.add('Access-Control-Allow-Origin', '*')
 
-    }
-    return jsonify(data)
+
+    return response
     # return jsonify(json_data)
 
 
@@ -63,8 +65,7 @@ def fetch_poster(movie_id):
 
 def recommend(movie):
     print(movie)
-    recommended_movie_names = []
-    recommended_movie_posters = []
+    recommended_movie_id = []
     # print("{} checking".format(movies.loc[movies['title'] == movie].index[0]))
     try:
         index = movies.loc[movies['title'] == movie].index[0]
@@ -74,8 +75,7 @@ def recommend(movie):
             # fetch the movie poster
             movie_id = movies.iloc[i[0]].movie_id
             print("{}:{}".format(movie_id,type(movie_id)))
-            recommended_movie_posters.append(int(movie_id))
-            recommended_movie_names.append(movies.iloc[i[0]].title)
+            recommended_movie_id.append(int(movie_id))
 
     
     except Exception as e:
@@ -83,4 +83,4 @@ def recommend(movie):
         res = {"response": "resume added failed"}
         print(e)
 
-    return recommended_movie_names,recommended_movie_posters
+    return recommended_movie_id
