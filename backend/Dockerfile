@@ -1,9 +1,9 @@
-FROM python:3.11.0a5-alpine3.15
+FROM python:3.11.0b4-bullseye
 
 WORKDIR /rp
 
 COPY requirements.txt requirements.txt
-RUN pip3 install -r requirements.txt
+RUN python3 -m pip install -r requirements.txt
 
 COPY . .
 

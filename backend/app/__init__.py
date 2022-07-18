@@ -6,7 +6,7 @@
 from flask import Flask
 import os
 
-from ml import extra_fn
+# from ml import movie_list
 
 # from ml import resume_parsing
 
@@ -21,4 +21,4 @@ if os.path.isdir(raw_resume_dir) == False:
     os.makedirs(raw_resume_dir)
 
 
-from app import routes , model
+from app import routes 

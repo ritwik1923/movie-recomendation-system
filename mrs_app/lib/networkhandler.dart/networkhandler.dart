@@ -13,7 +13,8 @@ class NetworkHandler {
 
   // String baseurl = "http://10.0.2.2:80";
   // String baseurl = "http://127.0.0.1:5000";
-  String baseurl = "http://127.0.0.1:5000";
+  // String baseurl = "http://127.0.0.1:5000";
+  String baseurl = "http://0.0.0.0:5002";
 // var url = Uri.parse('https://example.com/whatsit/create');
   // Future getMovies2() async {
   //   String uri = formater("/getMovies");
@@ -57,7 +58,7 @@ class NetworkHandler {
     print("status: ${response.statusCode}");
     try {
       if (response.statusCode == 200) {
-         int t = 100;
+        int t = 100;
         var list = json.decode(response.body)['data'];
         List<MovieModel> movies = [];
         for (int m in list) {
